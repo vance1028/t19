@@ -14,10 +14,10 @@ function App() {
   const [data, setData] = useState<{ train: DataPoint[]; test: DataPoint[] }>({ train: [], test: [] });
   
   const [layers, setLayers] = useState<NetworkLayer[]>([
-    { neurons: 4, activation: 'relu' },
-    { neurons: 4, activation: 'relu' },
+    { neurons: 8, activation: 'tanh' },
+    { neurons: 8, activation: 'tanh' },
   ]);
-  const [learningRate, setLearningRate] = useState(0.05);
+  const [learningRate, setLearningRate] = useState(0.1);
   const [regularization, setRegularization] = useState(0);
   
   const [network, setNetwork] = useState<NeuralNetwork | null>(null);
@@ -32,6 +32,7 @@ function App() {
   });
   const [weights, setWeights] = useState<number[][][]>([]);
   const [layerSizes, setLayerSizes] = useState<number[]>([]);
+  const [boundaryVersion, setBoundaryVersion] = useState(0);
   
   const animationRef = useRef<number | null>(null);
   const networkRef = useRef<NeuralNetwork | null>(null);
@@ -58,23 +59,26 @@ function App() {
     });
   }, [layers, learningRate, regularization]);
 
-  const runStep = useCallback(() => {
+  const runStep = useCallback((epochs: number = 1) => {
     const net = networkRef.current;
     if (!net || data.train.length === 0) return;
     
     net.setLearningRate(learningRate);
     net.setRegularization(regularization);
     
-    net.trainBatch(data.train);
+    for (let i = 0; i < epochs; i++) {
+      net.trainEpoch(data.train, 32);
+    }
     
     const trainMetrics = net.evaluate(data.train);
     const testMetrics = net.evaluate(data.test);
     
     setWeights(net.getWeights());
     setLayerSizes(net.getLayerSizes());
+    setBoundaryVersion(v => v + 1);
     
     setTrainingState(prev => {
-      const newEpoch = prev.epoch + 1;
+      const newEpoch = prev.epoch + epochs;
       const newHistory = [
         ...prev.lossHistory,
         { epoch: newEpoch, trainLoss: trainMetrics.loss, testLoss: testMetrics.loss },
@@ -93,9 +97,7 @@ function App() {
   const trainLoop = useCallback(() => {
     if (!isTraining) return;
     
-    for (let i = 0; i < 5; i++) {
-      runStep();
-    }
+    runStep(2);
     
     animationRef.current = requestAnimationFrame(trainLoop);
   }, [isTraining, runStep]);
@@ -214,7 +216,7 @@ function App() {
                 📈 决策边界
               </h3>
               <div style={{ maxWidth: 450, margin: '0 auto' }}>
-                <DecisionBoundary network={network} trainData={data.train} testData={data.test} />
+                <DecisionBoundary key={boundaryVersion} network={network} trainData={data.train} testData={data.test} />
               </div>
               <div style={{ 
                 display: 'flex', 

@@ -154,15 +154,11 @@ export class NeuralNetwork {
       
       totalLoss += this.binaryCrossEntropy(prediction, target);
       
-      const outputActivationDerivative = getActivationDerivative('sigmoid');
-      let delta: number[] = [
-        (prediction - target) * outputActivationDerivative(this.layers[this.layers.length - 1].preActivations[0])
-      ];
+      let delta: number[] = [prediction - target];
       
       for (let i = this.layers.length - 1; i >= 0; i--) {
         const layer = this.layers[i];
         const prevActivations = i === 0 ? input : this.layers[i - 1].activations;
-        const activationDerivative = getActivationDerivative(this.activations[i]);
         
         for (let j = 0; j < layer.weights.length; j++) {
           for (let k = 0; k < prevActivations.length; k++) {
@@ -172,6 +168,7 @@ export class NeuralNetwork {
         }
         
         if (i > 0) {
+          const prevActivationDerivative = getActivationDerivative(this.activations[i - 1]);
           const nextDelta: number[] = new Array(this.layers[i - 1].weights.length).fill(0);
           for (let j = 0; j < layer.weights.length; j++) {
             for (let k = 0; k < layer.weights[j].length; k++) {
@@ -179,7 +176,7 @@ export class NeuralNetwork {
             }
           }
           for (let k = 0; k < nextDelta.length; k++) {
-            nextDelta[k] *= activationDerivative(this.layers[i - 1].preActivations[k]);
+            nextDelta[k] *= prevActivationDerivative(this.layers[i - 1].preActivations[k]);
           }
           delta = nextDelta;
         }
@@ -242,5 +239,19 @@ export class NeuralNetwork {
 
   public setRegularization(reg: number): void {
     this.regularization = reg;
+  }
+
+  public trainEpoch(data: DataPoint[], batchSize: number = 32): number {
+    const shuffled = [...data].sort(() => Math.random() - 0.5);
+    let totalLoss = 0;
+    let batchCount = 0;
+    
+    for (let i = 0; i < shuffled.length; i += batchSize) {
+      const batch = shuffled.slice(i, i + batchSize);
+      totalLoss += this.trainBatch(batch);
+      batchCount++;
+    }
+    
+    return totalLoss / batchCount;
   }
 }
