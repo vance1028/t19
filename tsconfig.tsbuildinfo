@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/dataset.ts","./src/main.tsx","./src/neuralnetwork.ts","./src/types.ts","./src/vite-env.d.ts","./src/components/controlpanel.tsx","./src/components/decisionboundary.tsx","./src/components/losschart.tsx","./src/components/networkvisualizer.tsx"],"version":"5.9.3"}
